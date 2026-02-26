@@ -67,3 +67,7 @@ ProjectSettings/
 - 平滑化: `Vector2.Lerp(..., smoothing)`
 
 この土台に、しゃがみ・左右移動・スキル発動などの判定を順次追加できます。
+
+## Planning Docs
+- [Camera preview setup](Plan/CameraPreviewSetup.md)
+- [MediaPipe integration](Plan/MediaPipeIntegration.md)
