@@ -1,0 +1,9 @@
+flowchart LR
+  cam[WebCamTexture\n(Unity Camera Frame)] --> sample[Frame Sampler\nLuma + Motion Delta]
+  sample --> heuristic[Heuristic Pose Mapper\nleft_wrist / right_wrist / nose]
+  heuristic --> smooth[TryUpdate\nconfidenceThreshold + smoothing]
+  smooth --> rule{Hands Up?\nleft.y < nose.y && right.y < nose.y}
+  rule -->|true| on[Barrier ON]
+  rule -->|false| off[Barrier OFF]
+
+  mock[Local Mock Generator] --> smooth
