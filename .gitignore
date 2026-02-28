@@ -1,0 +1,9 @@
+﻿# IDE / OS files
+.vscode/
+.vs/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Package manager cache
+**/Packages/packages-lock.json

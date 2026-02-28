@@ -1,0 +1,31 @@
+# Unity generated folders
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+UserSettings/
+MemoryCaptures/
+
+# Unity generated files
+*.csproj
+*.sln
+*.slnx
+*.unityproj
+*.pidb
+*.suo
+*.user
+*.userprefs
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+
+# Unity cache & diagnostics
+sysinfo.txt
+
+# Addressables and generated asset data
+Assets/AddressableAssetsData/*/*.bin*
