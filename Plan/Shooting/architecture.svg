@@ -1,0 +1,115 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="840" viewBox="0 0 1400 840">
+  <defs>
+    <style>
+      .title { font: 700 26px 'Segoe UI', sans-serif; fill: #0f172a; }
+      .group { font: 700 18px 'Segoe UI', sans-serif; fill: #0f172a; }
+      .node { font: 600 15px 'Segoe UI', sans-serif; fill: #111827; }
+      .small { font: 500 13px 'Segoe UI', sans-serif; fill: #374151; }
+      .lane { rx: 14; ry: 14; stroke-width: 2; }
+      .box { rx: 10; ry: 10; stroke: #334155; stroke-width: 1.8; }
+      .arrow { stroke: #334155; stroke-width: 2.2; fill: none; marker-end: url(#arrowHead); }
+      .label { font: 500 12px 'Segoe UI', sans-serif; fill: #334155; }
+    </style>
+    <marker id="arrowHead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#334155" />
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="1400" height="840" fill="#f8fafc"/>
+  <text x="40" y="48" class="title">BodyShooter2D Architecture: Unity + MediaPipeUnity + MediaPipe</text>
+
+  <rect x="40" y="80" width="1320" height="120" class="lane" fill="#e0f2fe" stroke="#0284c7"/>
+  <text x="60" y="112" class="group">Unity Scene Layer</text>
+
+  <rect x="70" y="130" width="250" height="50" class="box" fill="#ffffff"/>
+  <text x="95" y="162" class="node">BodyShooter2D.unity</text>
+
+  <rect x="360" y="130" width="260" height="50" class="box" fill="#ffffff"/>
+  <text x="382" y="162" class="node">Solution GameObject</text>
+
+  <rect x="40" y="220" width="640" height="560" class="lane" fill="#ecfeff" stroke="#0891b2"/>
+  <text x="60" y="252" class="group">MediaPipeUnity Layer (Assets/MediaPipeUnity)</text>
+
+  <rect x="80" y="290" width="280" height="70" class="box" fill="#ffffff"/>
+  <text x="104" y="318" class="node">PoseLandmarkerRunner</text>
+  <text x="104" y="340" class="small">Reads camera frame, executes task</text>
+
+  <rect x="400" y="290" width="240" height="70" class="box" fill="#ffffff"/>
+  <text x="426" y="318" class="node">Screen / UI</text>
+  <text x="426" y="340" class="small">Preview + annotation display</text>
+
+  <rect x="80" y="410" width="280" height="70" class="box" fill="#ffffff"/>
+  <text x="100" y="438" class="node">ImageSourceProvider</text>
+  <text x="100" y="460" class="small">WebCam / Input texture source</text>
+
+  <rect x="720" y="220" width="640" height="300" class="lane" fill="#fff7ed" stroke="#ea580c"/>
+  <text x="740" y="252" class="group">MediaPipe Core Layer (Packages/com.github.homuler.mediapipe)</text>
+
+  <rect x="760" y="290" width="260" height="70" class="box" fill="#ffffff"/>
+  <text x="786" y="318" class="node">PoseLandmarker</text>
+  <text x="786" y="340" class="small">ML inference engine</text>
+
+  <rect x="1060" y="290" width="260" height="70" class="box" fill="#ffffff"/>
+  <text x="1076" y="318" class="node">PoseLandmarkerResult</text>
+  <text x="1076" y="340" class="small">Landmarks + masks</text>
+
+  <rect x="910" y="410" width="300" height="80" class="box" fill="#ffffff"/>
+  <text x="934" y="442" class="node">PoseLandmarkerResultAnnotationController</text>
+  <text x="934" y="464" class="small">Keeps _currentTarget (private)</text>
+
+  <rect x="40" y="540" width="1320" height="240" class="lane" fill="#f0fdf4" stroke="#16a34a"/>
+  <text x="60" y="572" class="group">BodyShooter Gameplay Layer (Assets/Scripts/BodyShooter)</text>
+
+  <rect x="80" y="610" width="240" height="70" class="box" fill="#ffffff"/>
+  <text x="105" y="638" class="node">BodyShooterAutoBootstrap</text>
+  <text x="105" y="660" class="small">Finds/creates and wires components</text>
+
+  <rect x="360" y="610" width="230" height="70" class="box" fill="#ffffff"/>
+  <text x="388" y="638" class="node">PoseResultBridge</text>
+  <text x="388" y="660" class="small">Reads _currentTarget via reflection</text>
+
+  <rect x="630" y="610" width="240" height="70" class="box" fill="#ffffff"/>
+  <text x="657" y="638" class="node">BodyPoseInputAdapter</text>
+  <text x="657" y="660" class="small">Shoulders(11,12) -> chest normalized</text>
+
+  <rect x="910" y="610" width="210" height="70" class="box" fill="#ffffff"/>
+  <text x="938" y="638" class="node">GameLoopController</text>
+  <text x="938" y="660" class="small">Subscribes tracking events</text>
+
+  <rect x="1160" y="610" width="170" height="70" class="box" fill="#ffffff"/>
+  <text x="1185" y="638" class="node">PlayerShipController2D</text>
+  <text x="1185" y="660" class="small">Moves player</text>
+
+  <line x1="320" y1="155" x2="360" y2="155" class="arrow"/>
+  <text x="325" y="146" class="label">contains</text>
+
+  <line x1="220" y1="410" x2="220" y2="360" class="arrow"/>
+  <text x="232" y="390" class="label">frame input</text>
+
+  <line x1="360" y1="325" x2="760" y2="325" class="arrow"/>
+  <text x="525" y="314" class="label">invoke detect</text>
+
+  <line x1="1020" y1="325" x2="1060" y2="325" class="arrow"/>
+  <text x="1024" y="314" class="label">output</text>
+
+  <line x1="1190" y1="360" x2="1060" y2="410" class="arrow"/>
+  <text x="1110" y="388" class="label">draw / store</text>
+
+  <line x1="1210" y1="450" x2="590" y2="620" class="arrow"/>
+  <text x="862" y="520" class="label">_currentTarget (reflection read)</text>
+
+  <line x1="320" y1="645" x2="360" y2="645" class="arrow"/>
+  <text x="324" y="634" class="label">configure</text>
+
+  <line x1="590" y1="645" x2="630" y2="645" class="arrow"/>
+  <text x="595" y="634" class="label">PushPoseResult</text>
+
+  <line x1="870" y1="645" x2="910" y2="645" class="arrow"/>
+  <text x="870" y="634" class="label">OnChest / OnTracking</text>
+
+  <line x1="1120" y1="645" x2="1160" y2="645" class="arrow"/>
+  <text x="1128" y="634" class="label">SetChestNormalized</text>
+
+  <line x1="620" y1="320" x2="400" y2="320" class="arrow"/>
+  <text x="445" y="304" class="label">preview + annotation</text>
+</svg>
