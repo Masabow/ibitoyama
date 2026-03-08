@@ -70,21 +70,36 @@ namespace Ibitoyama.BodyShooter
     private static bool TryGetChestCenter(PoseLandmarkerResult result, out Vector2 chest)
     {
       chest = new Vector2(0.5f, 0.5f);
-      if (result.poseLandmarks == null || result.poseLandmarks.Count == 0)
+      if (result.poseLandmarks == null)
       {
         return false;
       }
 
-      var pose = result.poseLandmarks[0];
-      if (pose.landmarks == null || pose.landmarks.Count <= RightShoulderIndex)
+      try
       {
+        if (result.poseLandmarks.Count == 0)
+        {
+          return false;
+        }
+
+        var pose = result.poseLandmarks[0];
+        if (pose.landmarks == null
+            || (uint)LeftShoulderIndex >= (uint)pose.landmarks.Count
+            || (uint)RightShoulderIndex >= (uint)pose.landmarks.Count)
+        {
+          return false;
+        }
+
+        var leftShoulder = pose.landmarks[LeftShoulderIndex];
+        var rightShoulder = pose.landmarks[RightShoulderIndex];
+        chest = new Vector2((leftShoulder.x + rightShoulder.x) * 0.5f, (leftShoulder.y + rightShoulder.y) * 0.5f);
+        return true;
+      }
+      catch (ArgumentOutOfRangeException)
+      {
+        // Pose result can be swapped while this frame is reading it.
         return false;
       }
-
-      var leftShoulder = pose.landmarks[LeftShoulderIndex];
-      var rightShoulder = pose.landmarks[RightShoulderIndex];
-      chest = new Vector2((leftShoulder.x + rightShoulder.x) * 0.5f, (leftShoulder.y + rightShoulder.y) * 0.5f);
-      return true;
     }
 
     private void SetTrackingState(bool isTracking)

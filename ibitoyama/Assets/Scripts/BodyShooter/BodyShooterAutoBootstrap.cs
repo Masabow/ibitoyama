@@ -12,6 +12,7 @@ namespace Ibitoyama.BodyShooter
     private const string PlayerObjectName = "BodyShooterPlayer";
     private const string EnemyTemplateName = "BodyShooterEnemyTemplate";
     private const string GameplayCameraName = "BodyShooter Camera";
+    private const string HudCanvasName = "BodyShooter HUD Canvas";
     private static bool _initializedForScene;
     private static Mesh _fallbackQuadMesh;
     private static Material _playerMaterial;
@@ -69,8 +70,7 @@ namespace Ibitoyama.BodyShooter
       }
       spawner.Configure(enemyTemplate, -7f, 7f, 5.5f);
 
-      EnsureMainCameraOrthographic();
-      EnsureGameplayCamera();
+      EnsureMainCameraForGameplayAndUi();
       EnsureEventSystem();
       CreateOrFindUi(out var hpText, out var trackingText, out var gameOverPanel, out var restartButton);
 
@@ -302,7 +302,7 @@ namespace Ibitoyama.BodyShooter
       return go.AddComponent<T>();
     }
 
-    private static void EnsureMainCameraOrthographic()
+    private static void EnsureMainCameraForGameplayAndUi()
     {
       var cam = Camera.main;
       if (cam == null)
@@ -314,34 +314,24 @@ namespace Ibitoyama.BodyShooter
 
       cam.orthographic = true;
       cam.orthographicSize = 5f;
-      cam.transform.position = new Vector3(0f, 0f, -10f);
-    }
-
-    private static void EnsureGameplayCamera()
-    {
-      var camGo = GameObject.Find(GameplayCameraName);
-      Camera cam;
-      if (camGo == null)
-      {
-        camGo = new GameObject(GameplayCameraName);
-        cam = camGo.AddComponent<Camera>();
-      }
-      else
-      {
-        cam = camGo.GetComponent<Camera>() ?? camGo.AddComponent<Camera>();
-      }
-
-      cam.orthographic = true;
-      cam.orthographicSize = 5f;
-      cam.clearFlags = CameraClearFlags.Depth;
+      cam.clearFlags = CameraClearFlags.SolidColor;
       cam.cullingMask = ~0;
-      cam.depth = 1000f;
+      cam.depth = 0f;
       cam.nearClipPlane = 0.3f;
       cam.farClipPlane = 1000f;
       cam.enabled = true;
-
       cam.transform.position = new Vector3(0f, 0f, -10f);
       cam.transform.rotation = Quaternion.identity;
+
+      var gameplayCamGo = GameObject.Find(GameplayCameraName);
+      if (gameplayCamGo != null && gameplayCamGo != cam.gameObject)
+      {
+        var gameplayCam = gameplayCamGo.GetComponent<Camera>();
+        if (gameplayCam != null)
+        {
+          gameplayCam.enabled = false;
+        }
+      }
     }
 
     private static void EnsureEventSystem()
@@ -358,14 +348,19 @@ namespace Ibitoyama.BodyShooter
 
     private static void CreateOrFindUi(out Text hpText, out Text trackingText, out GameObject gameOverPanel, out Button restartButton)
     {
-      var canvas = Object.FindFirstObjectByType<Canvas>();
+      var canvasGo = GameObject.Find(HudCanvasName);
+      var canvas = canvasGo != null ? canvasGo.GetComponent<Canvas>() : null;
       if (canvas == null)
       {
-        var canvasGo = new GameObject("Canvas");
+        canvasGo = new GameObject(HudCanvasName);
         canvas = canvasGo.AddComponent<Canvas>();
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
         canvasGo.AddComponent<CanvasScaler>();
         canvasGo.AddComponent<GraphicRaycaster>();
+      }
+      else
+      {
+        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
       }
 
       var font = GetBuiltinUiFont();
