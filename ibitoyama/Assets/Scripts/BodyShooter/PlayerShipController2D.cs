@@ -37,6 +37,14 @@ namespace Ibitoyama.BodyShooter
       ApplyTrackingColor();
     }
 
+    public void ConfigureBounds(float minX, float maxX, float minY, float maxY)
+    {
+      xMin = minX;
+      xMax = maxX;
+      yMin = minY;
+      yMax = maxY;
+    }
+
     private void Update()
     {
       if (!_trackingAvailable)

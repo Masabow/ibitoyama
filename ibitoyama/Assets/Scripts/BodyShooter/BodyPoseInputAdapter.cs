@@ -8,66 +8,125 @@ namespace Ibitoyama.BodyShooter
   {
     private const int LeftShoulderIndex = 11;
     private const int RightShoulderIndex = 12;
+    private const int MaxSupportedPlayers = 4;
 
     [SerializeField] private bool mirrorMode = false;
     [SerializeField] private bool invertY = true;
     [SerializeField] private float smoothTime = 0.08f;
     [SerializeField] private float trackingTimeoutSec = 0.25f;
+    [SerializeField] [Range(1, MaxSupportedPlayers)] private int maxPlayers = MaxSupportedPlayers;
 
-    public event Action<Vector2> OnChestNormalizedChanged;
-    public event Action<bool> OnTrackingStateChanged;
+    public event Action<int, Vector2> OnChestNormalizedChanged;
+    public event Action<int, bool> OnTrackingStateChanged;
 
-    private Vector2 _targetChest = new Vector2(0.5f, 0.5f);
-    private Vector2 _currentChest = new Vector2(0.5f, 0.5f);
-    private Vector2 _velocity;
+    private readonly Vector2[] _targetChests = new Vector2[MaxSupportedPlayers];
+    private readonly Vector2[] _currentChests = new Vector2[MaxSupportedPlayers];
+    private readonly Vector2[] _velocities = new Vector2[MaxSupportedPlayers];
+    private readonly float[] _lastTrackedAt = new float[MaxSupportedPlayers];
+    private readonly bool[] _trackingStates = new bool[MaxSupportedPlayers];
+    private readonly bool[] _zoneUpdated = new bool[MaxSupportedPlayers];
 
-    private float _lastTrackedAt = -100f;
-    private bool _isTracking;
-
-    public Vector2 CurrentChestNormalized => _currentChest;
-    public bool IsTracking => _isTracking;
+    public int MaxPlayers => Mathf.Clamp(maxPlayers, 1, MaxSupportedPlayers);
 
     private void Update()
     {
-      if (_isTracking && Time.unscaledTime - _lastTrackedAt > trackingTimeoutSec)
+      for (var playerIndex = 0; playerIndex < MaxPlayers; playerIndex++)
       {
-        SetTrackingState(false);
-      }
+        if (_trackingStates[playerIndex] && Time.unscaledTime - _lastTrackedAt[playerIndex] > trackingTimeoutSec)
+        {
+          SetTrackingState(playerIndex, false);
+        }
 
-      var previous = _currentChest;
-      _currentChest = new Vector2(
-        Mathf.SmoothDamp(_currentChest.x, _targetChest.x, ref _velocity.x, smoothTime, Mathf.Infinity, Time.unscaledDeltaTime),
-        Mathf.SmoothDamp(_currentChest.y, _targetChest.y, ref _velocity.y, smoothTime, Mathf.Infinity, Time.unscaledDeltaTime));
+        var previous = _currentChests[playerIndex];
+        var velocity = _velocities[playerIndex];
+        _currentChests[playerIndex] = new Vector2(
+          Mathf.SmoothDamp(_currentChests[playerIndex].x, _targetChests[playerIndex].x, ref velocity.x, smoothTime, Mathf.Infinity, Time.unscaledDeltaTime),
+          Mathf.SmoothDamp(_currentChests[playerIndex].y, _targetChests[playerIndex].y, ref velocity.y, smoothTime, Mathf.Infinity, Time.unscaledDeltaTime));
+        _velocities[playerIndex] = velocity;
 
-      if (Vector2.SqrMagnitude(previous - _currentChest) > 0.000001f)
-      {
-        OnChestNormalizedChanged?.Invoke(_currentChest);
+        if (Vector2.SqrMagnitude(previous - _currentChests[playerIndex]) > 0.000001f)
+        {
+          OnChestNormalizedChanged?.Invoke(playerIndex, _currentChests[playerIndex]);
+        }
       }
     }
 
     public void PushPoseResult(PoseLandmarkerResult result)
     {
-      if (!TryGetChestCenter(result, out var chestCenter))
+      // 画面（カメラフレーム）を横方向に MaxPlayers 個の固定ゾーンに分割し、
+      // 各ゾーンに立った人物をそのままプレイヤー番号に割り当てる。
+      //  - 画面左 1/4 に立つ人 → Player 0、その右 → Player 1 …
+      //  - ゾーン内のローカル位置(0-1)を自機のレーン全幅にマッピングする
+      // これにより検出順や人数に依存せず、物理的な立ち位置で位置が安定する。
+      var zoneCount = MaxPlayers;
+      var zoneWidth = 1f / zoneCount;
+      Array.Clear(_zoneUpdated, 0, _zoneUpdated.Length);
+
+      if (result.poseLandmarks != null && result.poseLandmarks.Count > 0)
       {
-        return;
+        var poseCount = result.poseLandmarks.Count;
+        for (var poseIdx = 0; poseIdx < poseCount; poseIdx++)
+        {
+          if (!TryGetChestCenter(result, poseIdx, out var chest))
+          {
+            continue;
+          }
+
+          // 画面表示上のX（mirrorMode のときは画像右端が画面左に見えるため反転）
+          var displayX = Mathf.Clamp01(mirrorMode ? 1f - chest.x : chest.x);
+
+          // 立ち位置からゾーン（プレイヤー番号）を決定する
+          var zone = Mathf.Clamp(Mathf.FloorToInt(displayX * zoneCount), 0, zoneCount - 1);
+          if (_zoneUpdated[zone])
+          {
+            // 同一ゾーンに複数人 → 先に検出された1人を採用する
+            continue;
+          }
+
+          // ゾーン内ローカルX(0-1)に正規化する
+          var localX = (displayX - (zone * zoneWidth)) / zoneWidth;
+          var y = invertY ? 1f - chest.y : chest.y;
+
+          _targetChests[zone] = new Vector2(Mathf.Clamp01(localX), Mathf.Clamp01(y));
+          _lastTrackedAt[zone] = Time.unscaledTime;
+          SetTrackingState(zone, true);
+          _zoneUpdated[zone] = true;
+        }
       }
 
-      _lastTrackedAt = Time.unscaledTime;
-      SetTrackingState(true);
-
-      var x = mirrorMode ? 1f - chestCenter.x : chestCenter.x;
-      var y = invertY ? 1f - chestCenter.y : chestCenter.y;
-      _targetChest = new Vector2(Mathf.Clamp01(x), Mathf.Clamp01(y));
+      // このフレームで人物が居なかったゾーンはトラッキング解除する
+      for (var zone = 0; zone < zoneCount; zone++)
+      {
+        if (!_zoneUpdated[zone])
+        {
+          SetTrackingState(zone, false);
+        }
+      }
     }
 
     public void ResetCalibration()
     {
-      _targetChest = new Vector2(0.5f, 0.5f);
-      _currentChest = new Vector2(0.5f, 0.5f);
-      _velocity = Vector2.zero;
+      for (var playerIndex = 0; playerIndex < MaxSupportedPlayers; playerIndex++)
+      {
+        _targetChests[playerIndex] = new Vector2(0.5f, 0.5f);
+        _currentChests[playerIndex] = new Vector2(0.5f, 0.5f);
+        _velocities[playerIndex] = Vector2.zero;
+        _lastTrackedAt[playerIndex] = -100f;
+        SetTrackingState(playerIndex, false);
+      }
     }
 
-    private static bool TryGetChestCenter(PoseLandmarkerResult result, out Vector2 chest)
+    public Vector2 GetCurrentChestNormalized(int playerIndex)
+    {
+      return IsPlayerIndexValid(playerIndex) ? _currentChests[playerIndex] : new Vector2(0.5f, 0.5f);
+    }
+
+    public bool IsTrackingPlayer(int playerIndex)
+    {
+      return IsPlayerIndexValid(playerIndex) && _trackingStates[playerIndex];
+    }
+
+    private static bool TryGetChestCenter(PoseLandmarkerResult result, int playerIndex, out Vector2 chest)
     {
       chest = new Vector2(0.5f, 0.5f);
       if (result.poseLandmarks == null)
@@ -82,7 +141,12 @@ namespace Ibitoyama.BodyShooter
           return false;
         }
 
-        var pose = result.poseLandmarks[0];
+        if ((uint)playerIndex >= (uint)result.poseLandmarks.Count)
+        {
+          return false;
+        }
+
+        var pose = result.poseLandmarks[playerIndex];
         if (pose.landmarks == null
             || (uint)LeftShoulderIndex >= (uint)pose.landmarks.Count
             || (uint)RightShoulderIndex >= (uint)pose.landmarks.Count)
@@ -102,15 +166,20 @@ namespace Ibitoyama.BodyShooter
       }
     }
 
-    private void SetTrackingState(bool isTracking)
+    private bool IsPlayerIndexValid(int playerIndex)
     {
-      if (_isTracking == isTracking)
+      return (uint)playerIndex < (uint)MaxPlayers;
+    }
+
+    private void SetTrackingState(int playerIndex, bool isTracking)
+    {
+      if (!IsPlayerIndexValid(playerIndex) || _trackingStates[playerIndex] == isTracking)
       {
         return;
       }
 
-      _isTracking = isTracking;
-      OnTrackingStateChanged?.Invoke(_isTracking);
+      _trackingStates[playerIndex] = isTracking;
+      OnTrackingStateChanged?.Invoke(playerIndex, isTracking);
     }
   }
 }
